@@ -557,6 +557,19 @@ install_guacamole() {
   systemctl start tomcat8
 }
 
+install_elk() {
+  wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+  echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-7.x.list
+  sudo apt update
+  sudo apt-get install default-jre
+  sudo apt install elasticsearch
+  sudo apt install kibana
+  sudo apt install logstash
+  sudo systemctl daemon-reload
+  sudo systemctl enable elasticsearch.service
+  sudo systemctl start elasticsearch.service
+}
+
 postinstall_tasks() {
   # Include Splunk and Zeek in the PATH
   echo export PATH="$PATH:/opt/splunk/bin:/opt/zeek/bin" >>~/.bashrc
