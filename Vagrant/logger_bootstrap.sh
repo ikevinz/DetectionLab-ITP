@@ -566,8 +566,8 @@ install_elk() {
   sudo apt install kibana
   sudo apt install logstash
   sudo systemctl daemon-reload
-  sudo systemctl enable elasticsearch.service
-  sudo systemctl start elasticsearch.service
+  systemctl enable elasticsearch.service
+  systemctl start elasticsearch.service
 }
 
 postinstall_tasks() {
