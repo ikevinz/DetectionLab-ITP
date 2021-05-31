@@ -30,11 +30,19 @@ configure_zsh() {
     # Configure zsh
     echo "[$(date +%H:%M:%S)]: Configuring ZSH..."
 
+    # Modifying the .zshrc file for Kali
     cd /home/kali
-    sed '/^setopt hist_verify/a # ZSH Config for Filebeats/ELK\nsetopt INC_APPEND_HISTORY' .zshrc > temp
-    sed "/^precmd() {/a     # Logging zsh commands to rsyslog\n    eval 'RETRN_VAL=\$?;logger -S 10000 -p local6.debug \"{\"user\": \"\$(whoami)\", \"path\": \"\$(pwd)\", \"pid\": \"\$\$\", \"b64_command\": \"\$(history | tail -n1 | /usr/bin/sed \"s/[ 0-9 ]*//\" | base64 -w0 )\", \"status\": \"\$RETRN_VAL\"}\"'" temp > temp2
-    mv temp2 .zshrc
-    rm temp
+    sed -i '/^setopt hist_verify/a # ZSH Config for Filebeats/ELK\nsetopt INC_APPEND_HISTORY' .zshrc
+    sed -i "/^precmd() {/a     # Logging zsh commands to rsyslog\n    eval 'RETRN_VAL=\$?;logger -S 10000 -p local6.debug \"{\"user\": \"\$(whoami)\", \"path\": \"\$(pwd)\", \"pid\": \"\$\$\", \"b64_command\": \"\$(history | tail -n1 | /usr/bin/sed \"s/[ 0-9 ]*//\" | base64 -w0 )\", \"status\": \"\$RETRN_VAL\"}\"'" .zshrc
+    
+
+    # Modifying root's zshrc
+    sudo cp .zshrc /root/.zshrc
+
+    # Modifying /etc/zsh/zshrc
+    #cd /etc/zsh
+    #sudo (echo $'\n'; echo >> zshrc
+    # Reloading zsh
     source ~/.zshrc
 
     echo "[$(date +%H:%M:%S)]: ZSH configuration complete."
@@ -43,6 +51,26 @@ configure_zsh() {
 configure_filebeat() {
     # Configure ELK Forwarding
     echo "[$(date +%H:%M:%S)]: Configuring ELK & FileBeats forwarding..."
+
+    # Configuring filebeat.yml
+    cd /etc/filebeat
+
+    # Enable logging
+    sudo sed -zi "s/- type: log\n\n  # Change to true to enable this input configuration.\n  enabled: false/- type: log\n\n  # Change to true to enable this input configuration.\n  enabled: true/" filebeat.yml
+    
+    # Enable Logstash, disable EL forwarding
+    sudo sed -i 's/output.elasticsearch/#output.elasticsearch/g' filebeat.yml
+    sudo sed 's/#output.logstash/output.logstash/g' filebeat.yml
+
+    # Configure ELK host (CLS) on port 5044 
+    sudo sed -i 's/.*hosts: ["localhost:9200"]/  #hosts: [\"192.168.38.105:9200\"]/' filebeat.yml
+    sudo sed 's/#hosts: ["localhost:5044"].*/hosts: [\"192.168.38.105:5044\"]/g' filebeat.yml
+    
+    #Start services
+    sudo systemctl enable filebeat.service
+    sudo systemctl start filebeat.service
+
+    echo "[$(date +%H:%M:%S)]: ELK & FileBeats forwarding configuration complete."
 }
 
 cleanup(){
@@ -53,14 +81,14 @@ cleanup(){
 main() {
     #Installing 
     echo "[$(date +%H:%M:%S)]: Setting Up RED Machine..."
-    install_filebeats
+    #install_filebeats
     echo "[$(date +%H:%M:%S)]: Installation Complete."
 
     #Configuring
     echo "[$(date +%H:%M:%S)]: Configuring RED Machine..."
-    configure_rsyslog
-    configure_zsh
-    #configure_filebeat
+    #configure_rsyslog
+    #configure_zsh
+    configure_filebeat
     echo "[$(date +%H:%M:%S)]: Configuration complete."
 
     #Cleanup
